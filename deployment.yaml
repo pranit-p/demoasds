@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-backend
+  labels:
+    env: dev
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      env: dev
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 3
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        env: dev
+    spec:
+      containers:
+      - name: flask-app
+        image: 851725578224.dkr.ecr.us-east-1.amazonaws.com/backend-flask-app:v2
+        ports:
+        - containerPort: 5000
+        resources:
+          requests:
+            cpu: 100m
+            memory: 500Mi
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: flask-backend-service
+  labels:
+    env: dev-green
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 5000
+  selector:
+    env: dev
+
+---
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: flask-auto-scaller
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: flask-backend
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 10
+status:
+  observedGeneration: 1
+  # lastScaleTime: 2024-12-24T15:04:05Z07:00
+  currentReplicas: 1
+  desiredReplicas: 3
+  currentMetrics:
+  - type: Resource
+    resource:
+      name: cpu
+      current:
+        averageUtilization: 0
+        averageValue: 0
+
+---
